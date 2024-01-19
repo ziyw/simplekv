@@ -14,7 +14,13 @@ type Server struct {
 }
 
 func (s *Server) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetResponse, error) {
+	log.Printf("Receive Get Request %v", in.GetKey())
 	return &pb.GetResponse{Value: "value"}, nil
+}
+
+func (s *Server) Put(ctx context.Context, in *pb.PutRequest) (*pb.PutResponse, error) {
+	log.Printf("Receive Put Request (%v, %s)", in.GetKey(), in.GetValue())
+	return &pb.PutResponse{Response: "DONE"}, nil
 }
 
 func main() {

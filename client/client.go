@@ -23,9 +23,16 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	r, err := client.Put(ctx, &pb.PutRequest{Key: "Hello", Value: "world"})
+	if err != nil {
+		log.Fatalf("client.Put failed: %v", err)
+	}
+	log.Printf("client.Put response: %v", r)
+
 	v, err := client.Get(ctx, &pb.GetRequest{Key: "Hello"})
 	if err != nil {
-		log.Fatalf("client.Get failed: %v", err)
+		log.Fatalf("client.Get response: %v", err)
 	}
-	log.Printf("value is :%v", v)
+	log.Printf("%v", v)
+
 }
