@@ -23,6 +23,16 @@ type Page struct {
 func Load(page_id string) *Page {
 	pageFileName := "page_" + page_id
 
+	// if file doesn't exist, return an empty hashmap directly
+	_, err := os.Stat(pageFileName)
+	if err != nil && os.IsNotExist(err) {
+		return &Page{
+			id:      page_id,
+			header:  HEADER,
+			hashmap: make(map[string]string),
+		}
+	}
+
 	byteArr := read(pageFileName)
 
 	if string(byteArr[:4]) != HEADER {
@@ -47,8 +57,6 @@ func (p Page) Flush() {
 		os.Remove(pageFileName)
 	} else if os.IsNotExist(err) {
 		fmt.Print("file doesn't exist, skip actions")
-	} else {
-		log.Fatalf("error checking file stats", err)
 	}
 
 	file, err := os.Create(pageFileName)

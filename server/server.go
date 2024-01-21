@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log"
+	"strconv"
 
 	"net"
 
@@ -35,8 +36,8 @@ func (s *Server) Put(ctx context.Context, in *pb.PutRequest) (*pb.PutResponse, e
 	// slog.Info(in.ProtoMessage())
 	slog.Info("Receive Put (%v:%v)", in.Key, in.Value)
 
-	page_id := hash(in.Key)
-	page := Load(string(page_id))
+	page_id := strconv.Itoa(hash(in.Key))
+	page := Load(page_id)
 	fmt.Print("Existing Page Content is ")
 	fmt.Println(page.hashmap)
 
@@ -54,7 +55,7 @@ func (s *Server) Put(ctx context.Context, in *pb.PutRequest) (*pb.PutResponse, e
 func (s *Server) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetResponse, error) {
 	slog.Info("Receive Get (%v)", in.Key)
 
-	page_id := string(hash(in.Key))
+	page_id := strconv.Itoa(hash(in.Key))
 	page := Load(page_id)
 	val, ok := page.hashmap[in.Key]
 	if ok {
