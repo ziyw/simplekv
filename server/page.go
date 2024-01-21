@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -19,8 +20,8 @@ type Page struct {
 }
 
 // Load read page from disk to memory
-func (p *Page) Load() {
-	pageFileName := "page_" + p.id
+func Load(page_id string) *Page {
+	pageFileName := "page_" + page_id
 
 	byteArr := read(pageFileName)
 
@@ -28,19 +29,26 @@ func (p *Page) Load() {
 		log.Fatalf("page header doesn't allign")
 	}
 
-	p.hashmap = decodeByteArrToHashMap(byteArr[4:])
+	return &Page{
+		id:      page_id,
+		header:  HEADER,
+		hashmap: decodeByteArrToHashMap(byteArr[4:]),
+	}
 }
 
 // Flush persists a page to disk
 func (p Page) Flush() {
 	pageFileName := "page_" + p.id
 
-	old, err := os.Stat(pageFileName)
-	if old != nil {
+	// check if file exist
+	_, err := os.Stat(pageFileName)
+	if err == nil {
+		fmt.Print("file exist, remove file")
 		os.Remove(pageFileName)
-	}
-	if err != nil {
-		log.Fatalf("error removing old page file: %v", err)
+	} else if os.IsNotExist(err) {
+		fmt.Print("file doesn't exist, skip actions")
+	} else {
+		log.Fatalf("error checking file stats", err)
 	}
 
 	file, err := os.Create(pageFileName)
@@ -173,3 +181,27 @@ func decodeBytesToNum(input []byte) uint32 {
 	}
 	return num
 }
+
+// func main() {
+
+// 	hmap := make(map[string]string)
+// 	hmap["hello"] = "world"
+
+// 	p_1 := Page{
+// 		id:      "1",
+// 		header:  HEADER,
+// 		hashmap: hmap,
+// 	}
+// 	p_1.Flush()
+
+// 	newPage := Load("1")
+// 	fmt.Println("Page content is ")
+// 	fmt.Print(newPage.hashmap)
+
+// 	newPage.hashmap["What"] = "ever"
+// 	newPage.Flush()
+
+// 	anotherPage := Load("1")
+// 	fmt.Println("Updated Page content is ")
+// 	fmt.Println(anotherPage.hashmap)
+// }
