@@ -10,11 +10,6 @@ import (
 	"os"
 )
 
-// TODO:
-// - Change to append-only
-// - Background thread to compress append-only
-// - hash-index
-
 const METADATA_SIZE = 4
 const HEADER = "PAGE"
 
