@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"log"
-	"strconv"
 
 	"net"
 
@@ -19,6 +18,7 @@ const HASH_CONST = 10
 
 type Server struct {
 	pb.UnimplementedSimpleKeyValueServer
+	activeSegment Segment
 }
 
 func hash(s string) int {
@@ -33,36 +33,40 @@ func hash(s string) int {
 // if hashmap is already hit the page size limit, return error
 // then persist the hashmap on disk
 func (s *Server) Put(ctx context.Context, in *pb.PutRequest) (*pb.PutResponse, error) {
-	// slog.Info(in.ProtoMessage())
 	slog.Info("Receive Put (%v:%v)", in.Key, in.Value)
 
-	page_id := strconv.Itoa(hash(in.Key))
-	page := Load(page_id)
-	fmt.Print("Existing Page Content is ")
-	fmt.Println(page.hashmap)
+	s.activeSegment.Append(in.Key, in.Value)
+	fmt.Println(s.activeSegment.hashmap)
 
-	// TODO: hashmap fullness check
-	page.hashmap[in.Key] = in.Value
-	page.Flush()
-
-	fmt.Print("Updated page content is")
-	fmt.Println(page.hashmap)
-
-	// log.Printf("Receive Put Request (%v, %s)", in.GetKey(), in.GetValue())
 	return &pb.PutResponse{Response: "DONE"}, nil
+
+	// slog.Info(in.ProtoMessage())
+
+	// page_id := strconv.Itoa(hash(in.Key))
+	// page := Load(page_id)
+	// fmt.Print("Existing Page Content is ")
+	// fmt.Println(page.hashmap)
+
+	// // TODO: hashmap fullness check
+	// page.hashmap[in.Key] = in.Value
+	// page.Flush()
+
+	// fmt.Print("Updated page content is")
+	// fmt.Println(page.hashmap)
+
+	// // log.Printf("Receive Put Request (%v, %s)", in.GetKey(), in.GetValue())
+	// return &pb.PutResponse{Response: "DONE"}, nil
 }
 
 func (s *Server) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetResponse, error) {
 	slog.Info("Receive Get (%v)", in.Key)
 
-	page_id := strconv.Itoa(hash(in.Key))
-	page := Load(page_id)
-	val, ok := page.hashmap[in.Key]
-	if ok {
+	if val, ok := s.activeSegment.GetValue(in.Key); ok {
 		return &pb.GetResponse{Value: val}, nil
+	} else {
+		return nil, errors.New("key doesn't not exist")
 	}
 
-	return nil, errors.New("key doesn't not exist")
 }
 
 // Start server
@@ -73,7 +77,9 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterSimpleKeyValueServer(s, &Server{})
+	pb.RegisterSimpleKeyValueServer(s, &Server{
+		activeSegment: *NewSegment(1),
+	})
 
 	log.Printf("server listening at %v", lis.Addr())
 

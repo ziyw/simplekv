@@ -16,6 +16,13 @@ type SegList struct {
 	segMap map[int]int
 }
 
+func NewSegList() SegList {
+	return SegList{
+		active: make([]Segment, 0),
+		segMap: make(map[int]int),
+	}
+}
+
 func (sl *SegList) AddSegment(s Segment) {
 	sl.segMap[s.id] = len(sl.active)
 	sl.active = append(sl.active, s)
@@ -34,6 +41,14 @@ func (sl SegList) GetNextId() int {
 
 	last := sl.active[len(sl.active)-1]
 	return last.id + 1
+}
+
+func (sl SegList) GetCurrentSegment() *Segment {
+	if len(sl.active) == 0 {
+		s := NewSegment(sl.GetNextId())
+		sl.AddSegment(*s)
+	}
+	return &sl.active[len(sl.active)-1]
 }
 
 // Segment:
