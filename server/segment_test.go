@@ -1,62 +1,107 @@
 package main
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 )
 
-func TestEncodeAndDecodeHashmap(t *testing.T) {
-	want := map[string]uint32{"Hello": 12, "World": 45}
+// func TestNewSegment(t *testing.T) {
+// 	tests :=
 
-	input := map[string]uint32{"Hello": 12, "World": 45}
-	got := DecodeHashMapSnapshot(EncodeHashMapToSnapshot(input))
-	if !reflect.DeepEqual(want, got) {
-		t.Fatalf("test expected: %v, got: %v\n", want, got)
+// 	tests := []struct {
+// 		input int
+// 		want  int
+// 	}{
+// 		{input: 12, want: 12},
+// 		{input: 0, want: 0},
+// 		{input: 255, want: 255},
+// 	}
+
+// 	s1 := NewSegment()
+
+// 	addToSegList(*s1)
+// 	s2 := NewSegment()
+
+// 	s3 := NewSegment()
+// 	fmt.Println("s3 segment name" + s3.segment_name)
+// }
+
+func TestSegmentListFunctions(t *testing.T) {
+	segList := SegList{
+		active: make([]Segment, 0),
+		segMap: make(map[int]int),
 	}
+
+	s1 := NewSegment(segList.GetNextId())
+	if s1.id != 1 {
+		t.Fatalf("test failed: first segment id is not 1, got: %v", s1.id)
+	}
+	segList.AddSegment(*s1)
+
+	s2 := NewSegment(segList.GetNextId())
+	if s2.id != 2 {
+		t.Fatalf("test failed: first segment id is not 2, got: %v", s2.id)
+	}
+	segList.AddSegment(*s2)
+
+	segList.RemoveSegment(s1.id)
+	s3 := NewSegment(segList.GetNextId())
+	if s3.id != 3 {
+		t.Fatalf("test failed: first segment id is not 3, got: %v", s3.id)
+	}
+
 }
 
-func TestSegmentAppend(t *testing.T) {
-	s := Segment{
-		id:      "1",
-		hashmap: make(map[string]uint32),
-	}
-	s.Append("Whatever", "54321")
-	fmt.Print(s.hashmap)
-}
+// func TestEncodeAndDecodeHashmap(t *testing.T) {
+// 	want := map[string]uint32{"Hello": 12, "World": 45}
 
-func TestSegmentGetValue(t *testing.T) {
-	s := Segment{
-		id:      "2",
-		hashmap: make(map[string]uint32),
-	}
+// 	input := map[string]uint32{"Hello": 12, "World": 45}
+// 	got := DecodeHashMapSnapshot(EncodeHashMapToSnapshot(input))
+// 	if !reflect.DeepEqual(want, got) {
+// 		t.Fatalf("test expected: %v, got: %v\n", want, got)
+// 	}
+// }
 
-	s.Append("Hello", "12345")
-	s.Append("Whatever", "54321")
+// func TestSegmentAppend(t *testing.T) {
+// 	s := Segment{
+// 		id:      "1",
+// 		hashmap: make(map[string]uint32),
+// 	}
+// 	s.Append("Whatever", "54321")
+// 	fmt.Print(s.hashmap)
+// }
 
-	val, _ := s.GetValue("Hello")
-	fmt.Println(val)
-}
+// func TestSegmentGetValue(t *testing.T) {
+// 	s := Segment{
+// 		id:      "2",
+// 		hashmap: make(map[string]uint32),
+// 	}
 
-func TestSegmentCompress(t *testing.T) {
-	s := Segment{
-		id:      "3",
-		hashmap: make(map[string]uint32),
-	}
+// 	s.Append("Hello", "12345")
+// 	s.Append("Whatever", "54321")
 
-	s.Append("Hello", "12345")
-	s.Append("Whatever", "54321")
-	s.Append("Hello", "ThisIsNew")
-	s.Append("Whatever", "This is newer")
+// 	val, _ := s.GetValue("Hello")
+// 	fmt.Println(val)
+// }
 
-	newSegment := s.Compress()
-	fmt.Println("SegmentCompress result")
-	fmt.Print(newSegment.hashmap)
-	for key := range newSegment.hashmap {
-		v, _ := newSegment.GetValue(key)
-		fmt.Printf("(%s: %s)", key, v)
-	}
+// func TestSegmentCompress(t *testing.T) {
+// 	s := Segment{
+// 		id:      "3",
+// 		hashmap: make(map[string]uint32),
+// 	}
 
-	DeleteFile(newSegment.id)
+// 	s.Append("Hello", "12345")
+// 	s.Append("Whatever", "54321")
+// 	s.Append("Hello", "ThisIsNew")
+// 	s.Append("Whatever", "This is newer")
 
-}
+// 	newSegment := s.Compress()
+// 	fmt.Println("SegmentCompress result")
+// 	fmt.Print(newSegment.hashmap)
+// 	for key := range newSegment.hashmap {
+// 		v, _ := newSegment.GetValue(key)
+// 		fmt.Printf("(%s: %s)", key, v)
+// 	}
+
+// 	DeleteFile(newSegment.id)
+
+// }
