@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"log"
 	"os"
 )
@@ -15,37 +14,58 @@ type Segment struct {
 	hashmap map[string]uint32 // in-memory map (key, offset)
 }
 
-func (s Segment) CreateSegmentFile() {
-	// Check if file exist, if yes, panic
-	info, _ := os.Stat(s.id)
-	if info != nil {
-		log.Fatal("segment file already exist")
-	}
-
-	_, err := os.Create(s.id)
-	if err != nil {
-		log.Fatalf("error creating segment file: %v", err)
-	}
-}
-
 // Remove duplicate records in segment file
-func (s Segment) Compress() {
+// read from back of the segment file to the front, get all keys
+// then write the new key-value to new file, update hashmap
+func (s Segment) Compress() *Segment {
+	newSegment := Segment{
+		id:      "segment_temp_" + s.id,
+		hashmap: make(map[string]uint32),
+	}
 
+	for k := range s.hashmap {
+		v, _ := s.GetValue(k)
+		newSegment.Append(k, v)
+	}
+	return &newSegment
 }
 
 // Merge two segment file into a third Segment
-func Merge(seg1, seg2 string) string {
-	return "whatever"
+func Merge(s1, s2 Segment) *Segment {
+	newSegment := Segment{
+		id:      "segment_merged" + s1.id + s2.id,
+		hashmap: make(map[string]uint32),
+	}
+
+	fst, snd := s1, s2
+	if s1.id < s2.id {
+		fst, snd = s2, s1
+	}
+
+	for k := range fst.hashmap {
+		v, _ := fst.GetValue(k)
+		newSegment.Append(k, v)
+	}
+
+	for k := range snd.hashmap {
+		// skip values that are already in first segment
+		_, ok := fst.GetValue(k)
+		if ok {
+			continue
+		}
+		v, _ := snd.GetValue(k)
+		newSegment.Append(k, v)
+	}
+
+	return &newSegment
 }
 
 // Append will append the key value byte to segment file
 // hashmap will also be updated
 func (s *Segment) Append(key, value string) {
-	filename := "segment_" + s.id
-
 	// Get the key-offset pair for hashmap
 	var offset uint32
-	info, err := os.Stat(filename)
+	info, _ := os.Stat(s.id)
 	if info != nil {
 		offset = uint32(info.Size())
 	} else {
@@ -53,13 +73,13 @@ func (s *Segment) Append(key, value string) {
 	}
 	s.hashmap[key] = offset
 
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// append new key-value to the end of the segment file
+	f, err := os.OpenFile(s.id, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	newRecord := []byte(key + "," + value + "\n")
-	fmt.Println(string(newRecord))
 	if _, err := f.Write(newRecord); err != nil {
 		f.Close()
 		log.Fatal(err)
@@ -76,8 +96,7 @@ func (s *Segment) GetValue(key string) (value string, ok bool) {
 		return "", false // hash key doesn't exist in current map
 	}
 
-	filename := "segment_" + s.id
-	b, err := os.ReadFile(filename)
+	b, err := os.ReadFile(s.id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -152,4 +171,24 @@ func DecodeHashMapSnapshot(snapshot []byte) map[string]uint32 {
 		log.Fatalf("error decoding hashmap snapshot: %v", err)
 	}
 	return hashmap
+}
+
+func CreateFile(filename string) {
+	// Check if file exist, if yes, panic
+	info, _ := os.Stat(filename)
+	if info != nil {
+		log.Fatal("segment file already exist")
+	}
+
+	_, err := os.Create(filename)
+	if err != nil {
+		log.Fatalf("error creating segment file: %v", err)
+	}
+}
+
+func DeleteFile(filename string) {
+	err := os.Remove(filename)
+	if err != nil {
+		log.Fatalf("error deleting file: %v", err)
+	}
 }

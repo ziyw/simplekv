@@ -36,5 +36,27 @@ func TestSegmentGetValue(t *testing.T) {
 
 	val, _ := s.GetValue("Hello")
 	fmt.Println(val)
+}
+
+func TestSegmentCompress(t *testing.T) {
+	s := Segment{
+		id:      "3",
+		hashmap: make(map[string]uint32),
+	}
+
+	s.Append("Hello", "12345")
+	s.Append("Whatever", "54321")
+	s.Append("Hello", "ThisIsNew")
+	s.Append("Whatever", "This is newer")
+
+	newSegment := s.Compress()
+	fmt.Println("SegmentCompress result")
+	fmt.Print(newSegment.hashmap)
+	for key := range newSegment.hashmap {
+		v, _ := newSegment.GetValue(key)
+		fmt.Printf("(%s: %s)", key, v)
+	}
+
+	DeleteFile(newSegment.id)
 
 }
