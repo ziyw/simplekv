@@ -11,61 +11,23 @@ import (
 const SEGMENT_NAME_FMT = "segment_%d"
 const SNAPSHOT_NAME_FMT = "snapshot_%d"
 
-type SegList struct {
-	active []Segment
-	segMap map[int]int
-}
-
-func NewSegList() SegList {
-	return SegList{
-		active: make([]Segment, 0),
-		segMap: make(map[int]int),
-	}
-}
-
-func (sl *SegList) AddSegment(s Segment) {
-	sl.segMap[s.id] = len(sl.active)
-	sl.active = append(sl.active, s)
-}
-
-func (sl *SegList) RemoveSegment(id int) {
-	rm := sl.segMap[id]
-	sl.active = append(sl.active[:rm], sl.active[rm+1:]...)
-	delete(sl.segMap, id)
-}
-
-func (sl SegList) GetNextId() int {
-	if len(sl.active) == 0 {
-		return 1
-	}
-
-	last := sl.active[len(sl.active)-1]
-	return last.id + 1
-}
-
-func (sl SegList) GetCurrentSegment() *Segment {
-	if len(sl.active) == 0 {
-		s := NewSegment(sl.GetNextId())
-		sl.AddSegment(*s)
-	}
-	return &sl.active[len(sl.active)-1]
-}
-
-// Segment:
-// Each segment is a append only log file and has a in-memory hashmap for fetching items
+// Segment is how key-value are persisted on disk.
+// content of the key-values are on segmentFile
+// Snapshot is the in memory hash map of (key, offset), where key-value saved on disk starts from offset.
 type Segment struct {
-	id            int
-	segment_name  string
-	snapshot_name string
-	hashmap       map[string]uint32 // in-memory map (key, offset)
+	id          int
+	segmentFile string
+
+	hashmap      map[string]uint32 // in-memory map (key, offset)
+	snapshotFile string            // persisted version of the hashmap
 }
 
 func NewSegment(nxtId int) *Segment {
 	return &Segment{
-		id:            nxtId,
-		segment_name:  fmt.Sprintf(SEGMENT_NAME_FMT, nxtId),
-		snapshot_name: fmt.Sprintf(SNAPSHOT_NAME_FMT, nxtId),
-		hashmap:       make(map[string]uint32),
+		id:           nxtId,
+		segmentFile:  fmt.Sprintf(SEGMENT_NAME_FMT, nxtId),
+		hashmap:      make(map[string]uint32),
+		snapshotFile: fmt.Sprintf(SNAPSHOT_NAME_FMT, nxtId),
 	}
 }
 
@@ -73,14 +35,6 @@ func NewSegment(nxtId int) *Segment {
 // read from back of the segment file to the front, get all keys
 // then write the new key-value to new file, update hashmap
 func (s Segment) Compress(nxtId int) *Segment {
-	// nxtId := getNextId()
-	// newSegment := Segment{
-	// 	id:            nxtId,
-	// 	segment_name:  fmt.Sprintf(SEGMENT_NAME_FMT, nxtId),
-	// 	snapshot_name: fmt.Sprintf(SNAPSHOT_NAME_FMT, nxtId),
-	// 	hashmap:       make(map[string]uint32),
-	// }
-
 	newSegment := NewSegment(nxtId)
 	for k := range s.hashmap {
 		v, _ := s.GetValue(k)
@@ -91,16 +45,9 @@ func (s Segment) Compress(nxtId int) *Segment {
 
 // Merge two segment file into a third Segment
 func Merge(s1, s2 Segment, nxtId int) *Segment {
-	// nxtId := getNextId(nxtId)
-	// newSegment := Segment{
-	// 	id:            nxtId,
-	// 	segment_name:  fmt.Sprintf(SEGMENT_NAME_FMT, nxtId),
-	// 	snapshot_name: fmt.Sprintf(SNAPSHOT_NAME_FMT, nxtId),
-	// 	hashmap:       make(map[string]uint32),
-	// }
-
 	newSegment := NewSegment(nxtId)
 
+	// latest segment is fst, older is snd
 	fst, snd := s1, s2
 	if s1.id < s2.id {
 		fst, snd = s2, s1
@@ -124,33 +71,32 @@ func Merge(s1, s2 Segment, nxtId int) *Segment {
 	return newSegment
 }
 
-// Append will append the key value byte to segment file
-// hashmap will also be updated
+// Append will append the key value byte to segment file and update hashmap
 func (s *Segment) Append(key, value string) {
+	// TODO: improve by keep filesize in memory, avoid fetching stats every time
 	// Get the key-offset pair for hashmap
 	var offset uint32
-	info, _ := os.Stat(s.segment_name)
+	info, _ := os.Stat(s.segmentFile)
 	if info != nil {
 		offset = uint32(info.Size())
 	} else {
 		offset = 0
 	}
-	s.hashmap[key] = offset
 
 	// append new key-value to the end of the segment file
-	f, err := os.OpenFile(s.segment_name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(s.segmentFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer f.Close()
 
 	newRecord := []byte(key + "," + value + "\n")
 	if _, err := f.Write(newRecord); err != nil {
-		f.Close()
 		log.Fatal(err)
 	}
-	if err := f.Close(); err != nil {
-		log.Fatal(err)
-	}
+
+	// add key-offset to hashmap after writing to disk
+	s.hashmap[key] = offset
 }
 
 // Check if value exist in current segment
@@ -160,7 +106,7 @@ func (s *Segment) GetValue(key string) (value string, ok bool) {
 		return "", false // hash key doesn't exist in current map
 	}
 
-	b, err := os.ReadFile(s.segment_name)
+	b, err := os.ReadFile(s.segmentFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -183,15 +129,15 @@ func (s *Segment) GetValue(key string) (value string, ok bool) {
 // Encode Hashmap and persist it to a file
 func (s Segment) CreateSnapshot() {
 	// check if snapshot file already exist, delete the previous one
-	f, _ := os.Stat(s.snapshot_name)
+	f, _ := os.Stat(s.snapshotFile)
 	if f != nil {
-		if e := os.Remove(s.snapshot_name); e != nil {
+		if e := os.Remove(s.snapshotFile); e != nil {
 			log.Fatalf("error deleting previous snapshot")
 		}
 	}
 	// encode hashmap to byte array, then write to snapshot file
 	snapshot := EncodeHashMapToSnapshot(s.hashmap)
-	err := os.WriteFile(s.snapshot_name, snapshot, 0644)
+	err := os.WriteFile(s.snapshotFile, snapshot, 0644)
 	if err != nil {
 		log.Fatalf("error creating hashmap snapshot")
 	}
@@ -199,12 +145,12 @@ func (s Segment) CreateSnapshot() {
 
 // Load a snapshot file back to hashmap
 func (s *Segment) LoadSnapshot() {
-	_, err := os.Stat(s.snapshot_name)
+	_, err := os.Stat(s.snapshotFile)
 	if err != nil {
 		log.Fatalf("load snapshot failed due to snapshot file doesn't exist: %v", err)
 	}
 
-	snapshot, err := os.ReadFile(s.snapshot_name)
+	snapshot, err := os.ReadFile(s.snapshotFile)
 	if err != nil {
 		log.Fatalf("load snapshot failed: %v", err)
 	}
