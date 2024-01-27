@@ -1,13 +1,25 @@
 package main
 
+import (
+	"fmt"
+	"log"
+	"os"
+	"strings"
+	"time"
+)
+
 type SegList struct {
 	list []*Segment
 }
 
 func NewSegList() *SegList {
-	return &SegList{
+	sl := &SegList{
 		list: make([]*Segment, 0),
 	}
+	sl.LoadSegments()
+
+	go sl.PersistSnapshots()
+	return sl
 }
 
 func (sl SegList) Size() int {
@@ -45,4 +57,33 @@ func (sl *SegList) GetCurrentSegment() *Segment {
 		return nil
 	}
 	return sl.list[len(sl.list)-1]
+}
+
+// Load persisted segment into active segment list.
+func (sl *SegList) LoadSegments() {
+	fmt.Println("Load Segments")
+
+	files, err := os.ReadDir(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		if strings.Contains(f.Name(), "snapshot_") {
+			fmt.Println("Load Segments from snapshot" + f.Name())
+			sl.AddSegment(NewSegmentFromSnapshot(f.Name()))
+		}
+	}
+	fmt.Println("Finish Load Segments")
+}
+
+// Periodic function to persist all snapshots of all active segments
+func (sl *SegList) PersistSnapshots() {
+	for {
+		time.Sleep(time.Second)
+		fmt.Println("Persist all snapshots")
+		for _, s := range sl.list {
+			s.CreateSnapshot()
+		}
+	}
 }

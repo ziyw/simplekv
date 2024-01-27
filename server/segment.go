@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 )
 
 const SEGMENT_NAME_FMT = "segment_%d"
@@ -156,6 +158,18 @@ func (s *Segment) LoadSnapshot() {
 	}
 
 	s.hashmap = DecodeHashMapSnapshot(snapshot)
+}
+
+func NewSegmentFromSnapshot(file string) *Segment {
+	idStr := strings.Split(file, "snapshot_")[1]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Fatalf("error pasring snapshot id :%s", file)
+	}
+
+	s := NewSegment(id)
+	s.LoadSnapshot()
+	return s
 }
 
 func EncodeHashMapToSnapshot(hashmap map[string]uint32) []byte {
