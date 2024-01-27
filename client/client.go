@@ -11,8 +11,24 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func main() {
+var (
+	f string
+	k string
+	v string
+)
 
+func init() {
+	flag.StringVar(&f, "functions", "get", "get or put function")
+	flag.StringVar(&f, "f", "get", "get or put function")
+
+	flag.StringVar(&k, "key", "", "key for query")
+	flag.StringVar(&k, "k", "", "key for query")
+
+	flag.StringVar(&v, "value", "", "value for query")
+	flag.StringVar(&v, "v", "", "value for query")
+}
+
+func main() {
 	flag.Parse()
 
 	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -20,22 +36,30 @@ func main() {
 		log.Fatalf("fail to dial: %v", err)
 	}
 	defer conn.Close()
-
 	client := pb.NewSimpleKeyValueClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	r, err := client.Put(ctx, &pb.PutRequest{Key: "Hello", Value: "world"})
-	if err != nil {
-		log.Fatalf("client.Put failed: %v", err)
+	switch f {
+	case "get":
+		{
+			v, err := client.Get(ctx, &pb.GetRequest{Key: k})
+			if err != nil {
+				log.Fatalf("client.Get response: %v", err)
+			}
+			log.Printf("get response: %v", v)
+			return
+		}
+	case "put":
+		{
+			v, err := client.Put(ctx, &pb.PutRequest{Key: k, Value: v})
+			if err != nil {
+				log.Fatalf("put failed: %v", err)
+			}
+			log.Printf("put response: %v", v)
+		}
+	default:
+		log.Println("Function doesn't exist: " + f)
 	}
-	log.Printf("client.Put response: %v", r)
-
-	v, err := client.Get(ctx, &pb.GetRequest{Key: "Hello"})
-	if err != nil {
-		log.Fatalf("client.Get response: %v", err)
-	}
-	log.Printf("%v", v)
-
 }
