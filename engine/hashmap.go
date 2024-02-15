@@ -5,13 +5,13 @@ import (
 	"encoding/gob"
 )
 
-// hashmap is key-offset pair. key is a string for the saved key,
-// offset is the offset of the value in segment file.
-type offset uint32
-type HashMap map[string]offset
+// hashmap is key-Offset pair. key is a string for the saved key,
+// Offset is the Offset of the value in segment file.
+type Offset uint32
+type HashMap map[string]Offset
 
 func NewHashMap() HashMap {
-	return make(map[string]offset)
+	return make(map[string]Offset)
 }
 
 func Encode(h HashMap) ([]byte, error) {

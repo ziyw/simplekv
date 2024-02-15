@@ -15,8 +15,8 @@ func TestNewHashMap(t *testing.T) {
 
 func TestPutAndGet(t *testing.T) {
 	hmap := NewHashMap()
-	inputKey, inputValue := "Hello", offset(12)
-	hmap[inputKey] = offset(inputValue)
+	inputKey, inputValue := "Hello", Offset(12)
+	hmap[inputKey] = Offset(inputValue)
 	got := hmap[inputKey]
 	fmt.Println(hmap)
 
