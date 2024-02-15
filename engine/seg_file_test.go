@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -92,7 +93,7 @@ func TestAppend(t *testing.T) {
 
 	// when file already exist, directly append to file
 	goodSegFile, _ := NewSegFile("goodFile")
-	//defer goodSegFile.Delete()
+	defer goodSegFile.Delete()
 
 	offset, _ := goodSegFile.Append("HelloWorld")
 	if offset != 0 {
@@ -104,9 +105,27 @@ func TestAppend(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {}
+func TestGet(t *testing.T) {
+	sf, _ := NewSegFile("goodSeg")
+	defer sf.Delete()
 
-func TestGetAll(t *testing.T) {}
+	sf.Append(NewEntry("hello", "world"))
+	sf.Append(NewEntry("hello2", "world2"))
+	sf.Append(NewEntry("hello", "world"))
+	sf.Append(NewEntry("hello", "world"))
+	fmt.Println(sf.Get(0))
+}
+
+func TestGetAll(t *testing.T) {
+	sf, _ := NewSegFile("goodSeg")
+	defer sf.Delete()
+
+	sf.Append(NewEntry("hello", "world"))
+	sf.Append(NewEntry("hello2", "world2"))
+	sf.Append(NewEntry("hello", "world"))
+	sf.Append(NewEntry("hello", "world"))
+	fmt.Println(sf.GetAll())
+}
 
 func TestCompress(t *testing.T) {}
 
