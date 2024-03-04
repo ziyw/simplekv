@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"fmt"
 )
 
 // HashMap is the in-memory key-offset pair.
@@ -53,7 +52,7 @@ func (h *HashMap) Put(key string, value Offset) {
 
 func (h *HashMap) Get(key string) (Offset, error) {
 	if v, ok := h.mem[key]; !ok {
-		return 0, fmt.Errorf("error getting key %v from hashmap", key)
+		return 0, errors.New("key doesn't exist")
 	} else {
 		return v, nil
 	}
@@ -68,6 +67,7 @@ func (h *HashMap) Persist() error {
 	return WriteFile(h.filename, encoded)
 }
 
+// Load file content back to in-memory map.
 func (h *HashMap) Load() error {
 	content, err := ReadFile(h.filename)
 	if err != nil {
