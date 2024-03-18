@@ -45,14 +45,30 @@ func NewSegment(id string) (*Segment, error) {
 }
 
 // Load from existing segment
-// func Load(id string) *Segment {
-// 	segFileName := SEG_FILE_PREFIX + id
-// 	hashFileName := HASH_FILE_PREFIX + id
-// sf, err := LoadSegFile(segFileName)
-// }
+// TODO: cover hashmap file not exist cases
+func Load(id string) (*Segment, error) {
+	segFileName := SEG_FILE_PREFIX + id
+	hashFileName := HASH_FILE_PREFIX + id
 
-// func (s Segment) PersistHashmap() {}
-// func (s Segment) LoadHashmap()    {}
+	sf, err := LoadSegFile(segFileName)
+	if err != nil {
+		return nil, err
+	}
+
+	hf, err := LoadHashMap(hashFileName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Segment{
+		id:           id,
+		segFileName:  segFileName,
+		hashFileName: hashFileName,
+		hashmap:      hf,
+		segFile:      sf,
+	}, nil
+
+}
 
 func (s Segment) Delete() {
 	s.segFile.Delete()

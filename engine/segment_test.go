@@ -20,6 +20,37 @@ func TestNewSegment_DuplicateFileNameError(t *testing.T) {
 	}
 }
 
+func TestLoadExistingSegment(t *testing.T) {
+	s1, err := NewSegment("seg_1")
+	if err != nil {
+		t.Error("segment creation failed")
+	}
+	defer s1.Delete()
+	s1.Put("hello", "world")
+	s1.Put("Whatever", "second line content")
+	s1.hashmap.Persist()
+
+	s2, err := Load("seg_1")
+	if err != nil {
+		t.Error("segment load failed")
+	}
+
+	fmt.Println("Loaded hashmap is")
+	fmt.Println(s2.hashmap.mem)
+
+	v, err := s2.Get("hello")
+	if err != nil {
+		t.Error("load value from new segment failed", err)
+		return
+	}
+
+	k1, _, _ := s1.GetAll()
+	k2, _, _ := s2.GetAll()
+	if v != "world" {
+		t.Errorf("load value error, want %v, got %v", k1, k2)
+	}
+}
+
 func TestDelete_Normal(t *testing.T) {
 	s1, err := NewSegment("seg_1")
 	if err != nil {

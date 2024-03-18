@@ -80,6 +80,9 @@ func (h *HashMap) Load() error {
 	if err != nil {
 		return err
 	}
+	if len(content) == 0 {
+		return nil
+	}
 
 	decoded, err := decode(content)
 	if err != nil {
