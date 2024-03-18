@@ -53,8 +53,7 @@ type SegFile struct {
 func NewSegFile(filename string) (*SegFile, error) {
 	// TODO: maybe when file already exist, use the existing file, no error
 	// file already exist, return nil
-	_, err := os.Stat(filename)
-	if err == nil {
+	if CheckExist(filename) {
 		return nil, errors.New("file already exist")
 	}
 
@@ -69,13 +68,23 @@ func NewSegFile(filename string) (*SegFile, error) {
 	}, nil
 }
 
+func LoadSegFile(filename string) (*SegFile, error) {
+	if !CheckExist(filename) {
+		return nil, errors.New("file doest not exist")
+	}
+	return &SegFile{filename}, nil
+}
+
 func (s SegFile) Delete() {
 	if err := os.Remove(s.name); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (s SegFile) Append(entry string) (Offset, error) {
+func (s SegFile) Append(key, value string) (Offset, error) {
+	// transform key-value to a long string entry
+	entry := NewEntry(key, value)
+
 	// segment file should exist before append to the file
 	var fileSize Offset = 0
 	info, err := os.Stat(s.name)
@@ -96,7 +105,7 @@ func (s SegFile) Append(entry string) (Offset, error) {
 	return fileSize, nil
 }
 
-func (s SegFile) GetAll() ([]Pair, error) {
+func (s SegFile) FetchAll() ([]Pair, error) {
 	// read file from offset to ENTRY_SEPARATOR, from ENTRY_SEPARATOR to ENTRY_END
 	info, err := os.Stat(s.name)
 	if err != nil {
@@ -134,11 +143,11 @@ func (s SegFile) GetAll() ([]Pair, error) {
 	return pairs, nil
 }
 
-func (s SegFile) Get(offset Offset) (Pair, error) {
+func (s SegFile) Fetch(offset Offset) (string, string, error) {
 	// read file from offset to ENTRY_SEPARATOR, from ENTRY_SEPARATOR to ENTRY_END
 	_, err := os.Stat(s.name)
 	if err != nil {
-		return Pair{}, err
+		return "", "", err
 	}
 
 	// this actually just load the file to memeory, think about how to better manager it
@@ -158,8 +167,5 @@ func (s SegFile) Get(offset Offset) (Pair, error) {
 		valueEnd++
 	}
 	value := string(buf[keyEnd+1 : valueEnd])
-	return Pair{
-		key:   key,
-		value: value,
-	}, nil
+	return key, value, nil
 }

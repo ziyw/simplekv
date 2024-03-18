@@ -32,6 +32,13 @@ func NewHashMap(filename string) (*HashMap, error) {
 	}, nil
 }
 
+func (h *HashMap) Delete() error {
+	for k := range h.mem {
+		delete(h.mem, k)
+	}
+	return DeleteFile(h.filename)
+}
+
 func LoadHashMap(filename string) (*HashMap, error) {
 	if !CheckExist(filename) {
 		return nil, errors.New("hashmap file does not exist")

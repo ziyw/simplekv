@@ -86,7 +86,7 @@ func TestAppend(t *testing.T) {
 	badSegFile := SegFile{
 		name: "not_exist",
 	}
-	_, err := badSegFile.Append("helloworld")
+	_, err := badSegFile.Append("hello", "world")
 	if err == nil {
 		t.Errorf("when segFile is not created, should return error")
 	}
@@ -95,36 +95,29 @@ func TestAppend(t *testing.T) {
 	goodSegFile, _ := NewSegFile("goodFile")
 	defer goodSegFile.Delete()
 
-	offset, _ := goodSegFile.Append("HelloWorld")
+	offset, _ := goodSegFile.Append("hello", "world")
 	if offset != 0 {
 		t.Errorf("offset is wrong, want %v, got %v", 0, offset)
 	}
-	newOffset, _ := goodSegFile.Append("HelloAgain")
+	newOffset, _ := goodSegFile.Append("hello", "again")
 	if newOffset == 0 {
 		t.Errorf("offset is wrong, new offset should not be zero")
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestFetch(t *testing.T) {
 	sf, _ := NewSegFile("goodSeg")
 	defer sf.Delete()
-
-	sf.Append(NewEntry("hello", "world"))
-	sf.Append(NewEntry("hello2", "world2"))
-	sf.Append(NewEntry("hello", "world"))
-	sf.Append(NewEntry("hello", "world"))
-	fmt.Println(sf.Get(0))
+	sf.Append("hello", "world")
+	fmt.Println(sf.Fetch(0))
 }
 
-func TestGetAll(t *testing.T) {
+func TestFetchAll(t *testing.T) {
 	sf, _ := NewSegFile("goodSeg")
 	defer sf.Delete()
 
-	sf.Append(NewEntry("hello", "world"))
-	sf.Append(NewEntry("hello2", "world2"))
-	sf.Append(NewEntry("hello", "world"))
-	sf.Append(NewEntry("hello", "world"))
-	fmt.Println(sf.GetAll())
+	sf.Append("hello", "world")
+	fmt.Println(sf.FetchAll())
 }
 
 func TestCompress(t *testing.T) {}

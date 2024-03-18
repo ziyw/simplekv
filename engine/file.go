@@ -2,7 +2,6 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 	"os"
 )
 
@@ -11,7 +10,6 @@ import (
 func CheckExist(filename string) bool {
 	info, err := os.Stat(filename)
 	if err != nil {
-		fmt.Printf("error opening file: %s", filename)
 		return false
 	}
 	return info.Size() >= 0
@@ -41,4 +39,12 @@ func OpenFile(filename string) (*os.File, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+func WriteFile(filename string, content []byte) error {
+	return os.WriteFile(filename, content, 0666)
+}
+
+func ReadFile(filename string) ([]byte, error) {
+	return os.ReadFile(filename)
 }
