@@ -123,3 +123,65 @@ func TestSegmentGetAll(t *testing.T) {
 		t.Errorf("getAll doesn't contain all keys, %v", values)
 	}
 }
+
+func TestCompressSegment(t *testing.T) {
+	s, err := NewSegment("seg_1")
+	if err != nil {
+		t.Error("error create new segment")
+	}
+	defer s.Delete()
+
+	s.Put("hello", "1")
+	s.Put("hello", "2")
+	s.Put("hello", "3")
+
+	s2, err := s.Compress("seg_2")
+	if err != nil {
+		t.Error("compress seg_1 failed", err)
+	}
+
+	v, err := s2.Get("hello")
+	if err != nil {
+		t.Error("compressed result is not correct", err)
+	}
+	defer s2.Delete()
+	if v != "3" {
+		t.Errorf("compressed result value is not correct, want %v, got %v", "3", v)
+	}
+}
+
+func TestMergeSegments(t *testing.T) {
+	s1, _ := NewSegment("s1")
+	s2, _ := NewSegment("s2")
+
+	s1.Put("hello", "s1")
+	s1.Put("World", "s1")
+	s2.Put("hello", "s2")
+	s2.Put("Whatever", "s2")
+
+	defer s1.Delete()
+	defer s2.Delete()
+
+	s3, err := Merge(s1, s2, "s3")
+	if err != nil {
+		t.Errorf("error mergin s1 and s2, %v", err)
+	}
+	defer s3.Delete()
+
+	v, err := s3.Get("hello")
+	if err != nil {
+		t.Errorf("error getting key from s3, %v", err)
+	}
+
+	if v != "s2" {
+		t.Errorf("value is wrong for key hello, want s2, get %v", v)
+	}
+
+	v, err = s3.Get("World")
+	if err != nil {
+		t.Errorf("get value error, %v", err)
+	}
+	if v != "s1" {
+		t.Errorf("value is wrong for key World, want s1, got %v", v)
+	}
+}

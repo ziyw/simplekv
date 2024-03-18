@@ -107,3 +107,57 @@ func (s Segment) GetAll() ([]string, []string, error) {
 	}
 	return keys, values, nil
 }
+
+// TODO: Merge(filename1, file2) -> create a new segment from two previous segment files
+// TODO: Persist hashmap -> periodic persist hashmap
+
+func (s Segment) Compress(nxtId string) (*Segment, error) {
+	compressed, err := NewSegment(nxtId)
+	if err != nil {
+		return nil, err
+	}
+
+	for k := range s.hashmap.mem {
+		v, err := s.Get(k)
+		if err != nil {
+			return nil, err
+		}
+		compressed.Put(k, v)
+	}
+
+	compressed.hashmap.Persist()
+	return compressed, nil
+}
+
+func Merge(first, second *Segment, nxtId string) (*Segment, error) {
+	nxt, err := NewSegment(nxtId)
+	if err != nil {
+		return nil, err
+	}
+
+	// combine hashmap to one
+	combined := make(map[string]Offset)
+	for k, offset := range first.hashmap.mem {
+		combined[k] = offset
+	}
+	for k, offset := range second.hashmap.mem {
+		combined[k] = offset
+	}
+
+	for k := range combined {
+		if _, ok := second.hashmap.mem[k]; ok {
+			v, err := second.Get(k)
+			if err != nil {
+				return nil, err
+			}
+			nxt.Put(k, v)
+		} else {
+			v, err := first.Get(k)
+			if err != nil {
+				return nil, err
+			}
+			nxt.Put(k, v)
+		}
+	}
+	return nxt, nil
+}
