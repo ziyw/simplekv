@@ -32,7 +32,7 @@ func TestLoadExistingSegment(t *testing.T) {
 
 	s2, err := Load("seg_1")
 	if err != nil {
-		t.Error("segment load failed")
+		t.Error("segment load failed", err)
 	}
 
 	fmt.Println("Loaded hashmap is")
@@ -121,6 +121,25 @@ func TestSegmentGetAll(t *testing.T) {
 	}
 	if !slices.Contains(values, "world") || !slices.Contains(values, "This is the second line") {
 		t.Errorf("getAll doesn't contain all keys, %v", values)
+	}
+}
+
+func TestSegmentPut_OverMaxItems(t *testing.T) {
+	s, _ := NewSegment("test_max_items")
+	defer s.Delete()
+
+	for i := 0; i < MAX_ITEM_NUM; i++ {
+		key, value := fmt.Sprintf("key is %d", i), fmt.Sprintf("value is %d", i)
+		s.Put(key, value)
+	}
+	fmt.Println(s.GetAll())
+
+	fmt.Println("Print one more")
+	err := s.Put("MoreThanOne", "LastOne")
+	if err == nil {
+		t.Error("should return exceed error", err)
+	} else {
+		fmt.Println("error is " + err.Error())
 	}
 }
 

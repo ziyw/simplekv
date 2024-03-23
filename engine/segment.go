@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	MAX_ITEM_NUM     = 20
 	SEG_FILE_PREFIX  = "SEG_FILE_"
 	HASH_FILE_PREFIX = "MAP_FILE_"
 )
@@ -22,7 +23,7 @@ func NewSegment(id string) (*Segment, error) {
 	hashFileName := HASH_FILE_PREFIX + id
 
 	if CheckExist(segFileName) || CheckExist(hashFileName) {
-		return nil, errors.New("already exist error")
+		return nil, errors.New("file already exist")
 	}
 
 	sf, err := NewSegFile(segFileName)
@@ -49,6 +50,14 @@ func NewSegment(id string) (*Segment, error) {
 func Load(id string) (*Segment, error) {
 	segFileName := SEG_FILE_PREFIX + id
 	hashFileName := HASH_FILE_PREFIX + id
+
+	if !CheckExist(segFileName) {
+		return nil, errors.New("segment file does not exist")
+	}
+
+	if !CheckExist(hashFileName) {
+		return nil, errors.New("hashmap file does not exist")
+	}
 
 	sf, err := LoadSegFile(segFileName)
 	if err != nil {
@@ -77,6 +86,10 @@ func (s Segment) Delete() {
 
 // Put key-value pair to both segment file and hashmap
 func (s Segment) Put(key, value string) error {
+	if len(s.hashmap.mem)+1 > MAX_ITEM_NUM {
+		return errors.New("exceed max segment items")
+	}
+
 	offset, err := s.segFile.Append(key, value)
 	if err != nil {
 		return err
@@ -108,9 +121,6 @@ func (s Segment) GetAll() ([]string, []string, error) {
 	return keys, values, nil
 }
 
-// TODO: Merge(filename1, file2) -> create a new segment from two previous segment files
-// TODO: Persist hashmap -> periodic persist hashmap
-
 func (s Segment) Compress(nxtId string) (*Segment, error) {
 	compressed, err := NewSegment(nxtId)
 	if err != nil {
@@ -129,6 +139,7 @@ func (s Segment) Compress(nxtId string) (*Segment, error) {
 	return compressed, nil
 }
 
+// second is the later than first, so second will always override first content
 func Merge(first, second *Segment, nxtId string) (*Segment, error) {
 	nxt, err := NewSegment(nxtId)
 	if err != nil {
