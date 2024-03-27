@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
 	pb "github.com/ziyw/simplekv/proto"
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -38,5 +38,5 @@ func main() {
 	defer cancel()
 
 	res, err := client.Put(ctx, &pb.PutRequest{Key: k, Value: v})
-	slog.Info("Response: ", res, "Error:", err)
+	fmt.Println(res)
 }

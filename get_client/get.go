@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
 	pb "github.com/ziyw/simplekv/proto"
-	"golang.org/x/exp/slog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -35,5 +35,10 @@ func main() {
 	defer cancel()
 
 	res, err := client.Get(ctx, &pb.GetRequest{Key: k})
-	slog.Info("Response: ", res, "Error:", err)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	} else {
+		fmt.Printf("value is %v\n", res.Value)
+	}
+
 }
