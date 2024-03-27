@@ -2,6 +2,13 @@ package engine
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -11,16 +18,17 @@ const (
 )
 
 type Segment struct {
-	id           string
+	id           int
 	segFileName  string
 	hashFileName string
 	hashmap      *HashMap
 	segFile      *SegFile
 }
 
-func NewSegment(id string) (*Segment, error) {
-	segFileName := SEG_FILE_PREFIX + id
-	hashFileName := HASH_FILE_PREFIX + id
+func NewSegment(id int) (*Segment, error) {
+
+	segFileName := ToSegFileName(id)
+	hashFileName := ToHashFileName(id)
 
 	if CheckExist(segFileName) || CheckExist(hashFileName) {
 		return nil, errors.New("file already exist")
@@ -47,9 +55,9 @@ func NewSegment(id string) (*Segment, error) {
 
 // Load from existing segment
 // TODO: cover hashmap file not exist cases
-func Load(id string) (*Segment, error) {
-	segFileName := SEG_FILE_PREFIX + id
-	hashFileName := HASH_FILE_PREFIX + id
+func Load(id int) (*Segment, error) {
+	segFileName := ToSegFileName(id)
+	hashFileName := ToHashFileName(id)
 
 	if !CheckExist(segFileName) {
 		return nil, errors.New("segment file does not exist")
@@ -86,7 +94,7 @@ func (s Segment) Delete() {
 
 // Put key-value pair to both segment file and hashmap
 func (s Segment) Put(key, value string) error {
-	if len(s.hashmap.mem)+1 > MAX_ITEM_NUM {
+	if len(s.hashmap.mem) >= MAX_ITEM_NUM {
 		return errors.New("exceed max segment items")
 	}
 
@@ -121,7 +129,7 @@ func (s Segment) GetAll() ([]string, []string, error) {
 	return keys, values, nil
 }
 
-func (s Segment) Compress(nxtId string) (*Segment, error) {
+func (s Segment) Compress(nxtId int) (*Segment, error) {
 	compressed, err := NewSegment(nxtId)
 	if err != nil {
 		return nil, err
@@ -140,7 +148,7 @@ func (s Segment) Compress(nxtId string) (*Segment, error) {
 }
 
 // second is the later than first, so second will always override first content
-func Merge(first, second *Segment, nxtId string) (*Segment, error) {
+func Merge(first, second *Segment, nxtId int) (*Segment, error) {
 	nxt, err := NewSegment(nxtId)
 	if err != nil {
 		return nil, err
@@ -171,4 +179,43 @@ func Merge(first, second *Segment, nxtId string) (*Segment, error) {
 		}
 	}
 	return nxt, nil
+}
+
+func ListSegmentFileNames(path string, sorted bool) []string {
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return []string{}
+	}
+
+	seg_files := []string{}
+	for _, f := range files {
+		if strings.Contains(f.Name(), SEG_FILE_PREFIX) {
+			seg_files = append(seg_files, f.Name())
+		}
+	}
+	if sorted {
+		sort.Strings(seg_files)
+		slices.Reverse(seg_files)
+		return seg_files
+	} else {
+		return seg_files
+	}
+}
+
+// construct segment file name from id or parse id from seg file name.
+func ToSegFileName(id int) string {
+	return fmt.Sprintf("%s%04d", SEG_FILE_PREFIX, id)
+}
+
+func ToHashFileName(id int) string {
+	return fmt.Sprintf("%s%04d", HASH_FILE_PREFIX, id)
+}
+
+func FromSegFilenName(segFileName string) int {
+	parts := strings.Split(segFileName, SEG_FILE_PREFIX)
+	id, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return -1
+	}
+	return id
 }

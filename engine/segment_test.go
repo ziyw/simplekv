@@ -8,20 +8,20 @@ import (
 )
 
 func TestNewSegment_DuplicateFileNameError(t *testing.T) {
-	s1, err := NewSegment("seg_1")
+	s1, err := NewSegment(1)
 	if err != nil {
 		t.Error("segment creation failed", err)
 	}
 	defer s1.Delete()
 
-	_, err = NewSegment("seg_1")
+	_, err = NewSegment(1)
 	if err == nil {
 		t.Error("duplicate segment name should result in error")
 	}
 }
 
 func TestLoadExistingSegment(t *testing.T) {
-	s1, err := NewSegment("seg_1")
+	s1, err := NewSegment(1)
 	if err != nil {
 		t.Error("segment creation failed")
 	}
@@ -30,7 +30,7 @@ func TestLoadExistingSegment(t *testing.T) {
 	s1.Put("Whatever", "second line content")
 	s1.hashmap.Persist()
 
-	s2, err := Load("seg_1")
+	s2, err := Load(1)
 	if err != nil {
 		t.Error("segment load failed", err)
 	}
@@ -52,13 +52,13 @@ func TestLoadExistingSegment(t *testing.T) {
 }
 
 func TestDelete_Normal(t *testing.T) {
-	s1, err := NewSegment("seg_1")
+	s1, err := NewSegment(1)
 	if err != nil {
 		t.Error("segment creation failed")
 	}
 	s1.Delete()
 
-	s2, err := NewSegment("seg_1")
+	s2, err := NewSegment(1)
 	if err != nil {
 		t.Error("deletion failed, segment creation failed")
 	}
@@ -76,7 +76,7 @@ func TestDelete_Normal(t *testing.T) {
 // }
 
 func TestSegmentPutAndGet(t *testing.T) {
-	s, _ := NewSegment("1")
+	s, _ := NewSegment(1)
 	defer s.Delete()
 
 	s.Put("hello", "world")
@@ -105,7 +105,7 @@ func TestSegmentPutAndGet(t *testing.T) {
 }
 
 func TestSegmentGetAll(t *testing.T) {
-	s, _ := NewSegment("1")
+	s, _ := NewSegment(1)
 	defer s.Delete()
 
 	s.Put("hello", "world")
@@ -125,7 +125,7 @@ func TestSegmentGetAll(t *testing.T) {
 }
 
 func TestSegmentPut_OverMaxItems(t *testing.T) {
-	s, _ := NewSegment("test_max_items")
+	s, _ := NewSegment(12)
 	defer s.Delete()
 
 	for i := 0; i < MAX_ITEM_NUM; i++ {
@@ -144,7 +144,7 @@ func TestSegmentPut_OverMaxItems(t *testing.T) {
 }
 
 func TestCompressSegment(t *testing.T) {
-	s, err := NewSegment("seg_1")
+	s, err := NewSegment(1)
 	if err != nil {
 		t.Error("error create new segment")
 	}
@@ -154,7 +154,7 @@ func TestCompressSegment(t *testing.T) {
 	s.Put("hello", "2")
 	s.Put("hello", "3")
 
-	s2, err := s.Compress("seg_2")
+	s2, err := s.Compress(2)
 	if err != nil {
 		t.Error("compress seg_1 failed", err)
 	}
@@ -170,8 +170,8 @@ func TestCompressSegment(t *testing.T) {
 }
 
 func TestMergeSegments(t *testing.T) {
-	s1, _ := NewSegment("s1")
-	s2, _ := NewSegment("s2")
+	s1, _ := NewSegment(1)
+	s2, _ := NewSegment(2)
 
 	s1.Put("hello", "s1")
 	s1.Put("World", "s1")
@@ -181,7 +181,7 @@ func TestMergeSegments(t *testing.T) {
 	defer s1.Delete()
 	defer s2.Delete()
 
-	s3, err := Merge(s1, s2, "s3")
+	s3, err := Merge(s1, s2, 3)
 	if err != nil {
 		t.Errorf("error mergin s1 and s2, %v", err)
 	}
