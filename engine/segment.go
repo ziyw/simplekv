@@ -103,7 +103,7 @@ func (s Segment) Put(key, value string) error {
 		return err
 	}
 	s.hashmap.mem[key] = offset
-	return nil
+	return s.hashmap.Persist()
 }
 
 // Get value using key from hashmap directly
