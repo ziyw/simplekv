@@ -32,7 +32,6 @@ func TestPut_NoExistingSegment_shouldCreateNewFile(t *testing.T) {
 
 	if keys[0] != "hello" || values[0] != "world" {
 		t.Errorf("error getting values keys: %v, values: %v", keys, values)
-
 	}
 
 }
@@ -88,4 +87,35 @@ func TestPut_ExceedMaxItem(t *testing.T) {
 		t.Errorf("error keys:%v, values: %v", keys, values)
 	}
 
+}
+
+func TestGet_SimpleCase(t *testing.T) {
+	s1, _ := NewSegment(1)
+	s2, _ := NewSegment(2)
+	s3, _ := NewSegment(3)
+	defer s1.Delete()
+	defer s2.Delete()
+	defer s3.Delete()
+
+	s1.Put("dup", "s1")
+	s1.Put("unique", "s1")
+	s2.Put("dup", "s2")
+	s3.Put("dup", "s3")
+
+	b := BufferManager{}
+	value, err := b.Get("dup")
+	if err != nil {
+		t.Errorf("error getting value: %v", err)
+	}
+	if value != "s3" {
+		t.Errorf("want: k3, got: %v", value)
+	}
+
+	value, err = b.Get("unique")
+	if err != nil {
+		t.Errorf("error getting value: %v", err)
+	}
+	if value != "s1" {
+		t.Errorf("want :s1, got: %v", value)
+	}
 }
